@@ -8,7 +8,7 @@
         "xstate": "5",
       },
       "devDependencies": {
-        "@types/bun": "latest",
+        "@types/bun": "^1.2.2",
         "@types/express": "^5.0.0",
       },
       "peerDependencies": {

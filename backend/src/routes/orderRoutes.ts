@@ -1,65 +1,76 @@
+import { orderMachine } from "../machines/orderMachine";
 import express from "express";
 import { createActor } from "xstate";
-import { orderMachine } from "../machines/orderMachine.js";
 
 const router = express.Router();
 
-const orderActors = new Map();
+const orders = new Map();
 
-// Create order
-router.post("/orders", (req, res) => {
-  const { id, amount, customerEmail } = req.body;
-
-  const actor = createActor(orderMachine);
-  actor.subscribe((state) => {
-    console.log(`Order ${id} state:`, state.value);
-  });
-
-  actor.start();
-  orderActors.set(id, actor);
-
-  actor.send({
-    type: "CREATE",
-    order: { id, amount, customerEmail },
-  });
-
-  res.json({ message: "Order created", id });
-});
-
-// Get order status
-router.get("/orders/:id", (req, res) => {
-  const actor = orderActors.get(req.params.id);
-  if (!actor) {
-    return res.status(404).json({ error: "Order not found" });
+router.post("/orders/:id", (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: "Order ID is required" });
   }
 
-  const state = actor.getSnapshot();
-  res.json({
-    status: state.value,
-    order: state.context.order,
-  });
+  const orderService = createActor(orderMachine).start();
+
+  orderService.send({ type: "CREATE", id });
+
+  orders.set(id, orderService);
+
+  res
+    .status(201)
+    .json({ orderId: id, status: orderService.getSnapshot().context.status });
 });
 
-// Approve order
 router.post("/orders/:id/approve", (req, res) => {
-  const actor = orderActors.get(req.params.id);
-  if (!actor) {
+  const { id } = req.params;
+  const orderService = orders.get(id);
+
+  if (!orderService) {
     return res.status(404).json({ error: "Order not found" });
   }
 
-  actor.send({ type: "APPROVE" });
-  res.json({ message: "Order approved" });
+  orderService.send({ type: "APPROVE" });
+
+  res.json({ orderId: id, status: orderService.state.context.status });
 });
 
-// Complete order
-router.post("/orders/:id/complete", (req, res) => {
-  const actor = orderActors.get(req.params.id);
-  if (!actor) {
+router.post("/orders/:id/reject", (req, res) => {
+  const { id } = req.params;
+  const orderService = orders.get(id);
+
+  if (!orderService) {
     return res.status(404).json({ error: "Order not found" });
   }
 
-  actor.send({ type: "COMPLETE" });
-  res.json({ message: "Order completed" });
+  orderService.send({ type: "REJECT" });
+
+  res.json({ orderId: id, status: orderService.state.context.status });
+});
+
+router.post("/orders/:id/complete", (req, res) => {
+  const { id } = req.params;
+  const orderService = orders.get(id);
+
+  if (!orderService) {
+    return res.status(404).json({ error: "Order not found" });
+  }
+
+  orderService.send({ type: "COMPLETE" });
+
+  res.json({ orderId: id, status: orderService.state.context.status });
+});
+
+router.get("/orders/:id", (req, res) => {
+  const { id } = req.params;
+  const orderService = orders.get(id);
+
+  if (!orderService) {
+    return res.status(404).json({ error: "Order not found" });
+  }
+
+  res.json({ orderId: id, status: orderService.state.context.status });
 });
 
 export default router;

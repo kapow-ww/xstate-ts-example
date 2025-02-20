@@ -1,6 +1,7 @@
 import "./App.css";
 import ToggleButton from "./components/toggle-button";
 import ChangeThemeToggle from "./components/change-theme-button";
+import CountButton from "./components/count-button";
 
 function App() {
   return (
@@ -8,6 +9,7 @@ function App() {
       <ChangeThemeToggle />
       <div className="flex justify-center items-center flex-col gap-8 h-full">
         <ToggleButton />
+        <CountButton />
       </div>
     </div>
   );
